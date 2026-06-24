@@ -34,7 +34,7 @@ spec:
     - type: prometheus
       metadata:
         serverAddress: http://prometheus-server.monitoring.svc:9090
-        metricName: http_requests_per_second
-        query: rate(http_requests_total{namespace="ai-platform"}[2m])
+        metricName: llm_requests_per_second
+        query: rate(llm_requests_total{namespace="ai-platform"}[2m])
         threshold: "100"
         activationThreshold: "10"

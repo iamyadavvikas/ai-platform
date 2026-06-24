@@ -123,7 +123,9 @@ The **AI Infrastructure Platform** is a complete, production-ready stack that ha
 The local demo runs a fully instrumented mock inference service with traffic generator and monitoring — no GPU required.
 
 ```bash
-cd /Users/vikasyadav/ai-platform
+# Clone and enter the project
+git clone https://github.com/iamyadavvikas/ai-platform.git
+cd ai-platform
 
 # Start core services
 docker compose up -d --build proxy prometheus grafana demo
@@ -353,7 +355,7 @@ triggers:
   - type: prometheus
     metadata:
       serverAddress: http://prometheus-server.monitoring.svc:9090
-      query: rate(http_requests_total{namespace="ai-platform"}[2m])
+      query: rate(llm_requests_total{namespace="ai-platform"}[2m])
       threshold: "100"       # Scale up when >100 req/s per pod
 ```
 
@@ -448,7 +450,7 @@ spec:
       modelFormat:
         name: vllm
       runtime: vllm-runtime
-      storageUri: huggingface://mistralai/Mistral-7B-Instruct-v0.3
+      storageUri: huggingface://mistralai/Mistral-7B-Instruct-v0.2
       resources:
         requests:
           nvidia.com/gpu: "1"
@@ -531,7 +533,7 @@ ai-platform/
 │       ├── datasources/            # Auto-provisioned Prometheus datasource
 │       └── dashboards/             # AI Platform Overview (8 panels)
 │
-├── docker-compose.yml             # Local demo orchestration (6 services)
+├── docker-compose.yml             # Local demo orchestration (7 services, 4 default + 3 with profiles)
 ├── demo/                          # Interactive demo page
 ├── scripts/                       # Demo automation
 ├── screenshots/                   # Visual documentation
