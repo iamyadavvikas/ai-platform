@@ -1,0 +1,23 @@
+apiVersion: keda.sh/v1alpha1
+kind: TriggerAuthentication
+metadata:
+  name: prometheus-auth
+  namespace: ai-platform
+  annotations:
+    prometheus-url: "http://prometheus-server.monitoring.svc:9090"
+spec:
+  secretTargetRef:
+    - name: prometheus-credentials
+      key: bearer-token
+      parameter: bearerToken
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: prometheus-credentials
+  namespace: ai-platform
+  annotations:
+    kubernetes.io/description: "Bearer token for Prometheus authentication. Replace with your actual token if Prometheus requires auth."
+type: Opaque
+stringData:
+  bearer-token: ""

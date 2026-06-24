@@ -1,0 +1,103 @@
+name: ai-platform
+
+networks:
+  ai-platform:
+    driver: bridge
+
+services:
+  proxy:
+    build: ./services/proxy
+    ports:
+      - "8000:8000"
+    environment:
+      - OLLAMA_URL=http://ollama:11434
+      - MODEL_NAME=phi3:mini
+      - MOCK_MODE=true
+      - SIMULATE_LATENCY_MS=500
+      - SIMULATE_TOKENS_PER_SEC=45
+    networks:
+      - ai-platform
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+  load-generator:
+    build: ./services/load-generator
+    depends_on:
+      proxy:
+        condition: service_healthy
+    restart: "no"
+    networks:
+      - ai-platform
+    profiles:
+      - load-test
+
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./config/prometheus:/etc/prometheus
+    networks:
+      - ai-platform
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.console.libraries=/etc/prometheus/console_libraries"
+      - "--web.console.templates=/etc/prometheus/consoles"
+      - "--web.enable-lifecycle"
+
+  grafana:
+    image: grafana/grafana:11.1.0
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_INSTALL_PLUGINS=
+    volumes:
+      - ./config/grafana/datasources:/etc/grafana/provisioning/datasources
+      - ./config/grafana/dashboards:/etc/grafana/provisioning/dashboards
+    networks:
+      - ai-platform
+    depends_on:
+      - prometheus
+
+  demo:
+    image: nginx:alpine
+    ports:
+      - "8080:80"
+    volumes:
+      - ./demo:/usr/share/nginx/html
+    networks:
+      - ai-platform
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.49.1
+    profiles:
+      - monitoring
+    ports:
+      - "8081:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    devices:
+      - /dev/kmsg
+    privileged: true
+    networks:
+      - ai-platform
+
+  pushgateway:
+    image: prom/pushgateway:v1.8.0
+    profiles:
+      - monitoring
+    ports:
+      - "9091:9091"
+    networks:
+      - ai-platform

@@ -1,0 +1,68 @@
+apiVersion: serving.kserve.io/v1beta1
+kind: InferenceService
+metadata:
+  name: llm-inference
+  namespace: ai-platform
+  annotations:
+    serving.kserve.io/deploymentMode: RawDeployment
+    autoscaling.knative.dev/minScale: "0"
+    autoscaling.knative.dev/maxScale: "5"
+spec:
+  predictor:
+    env:
+      - name: HF_TOKEN
+        valueFrom:
+          secretKeyRef:
+            name: hf-secret
+            key: token
+            optional: true
+      - name: HUGGING_FACE_HUB_TOKEN
+        valueFrom:
+          secretKeyRef:
+            name: hf-secret
+            key: token
+            optional: true
+    model:
+      modelFormat:
+        name: vllm
+      storageUri: huggingface://mistralai/Mistral-7B-Instruct-v0.2
+      resources:
+        requests:
+          cpu: "4"
+          memory: "16Gi"
+          nvidia.com/gpu: "1"
+        limits:
+          cpu: "8"
+          memory: "32Gi"
+          nvidia.com/gpu: "1"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: llm-inference
+  namespace: ai-platform
+  labels:
+    serving.kserve.io/inferenceservice: llm-inference
+spec:
+  selector:
+    serving.kserve.io/inferenceservice: llm-inference
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8000
+      protocol: TCP
+    - name: metrics
+      port: 8000
+      targetPort: 8000
+      protocol: TCP
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: hf-secret
+  namespace: ai-platform
+  annotations:
+    kubernetes.io/description: "HuggingFace token for gated model access. Replace 'placeholder-token' with your actual token."
+type: Opaque
+data:
+  token: cGxhY2Vob2xkZXItdG9rZW4=

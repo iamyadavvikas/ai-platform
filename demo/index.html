@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Platform Demo</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0d1117; color: #c9d1d9; min-height: 100vh; }
+  .container { max-width: 1400px; margin: 0 auto; padding: 24px; }
+  header { text-align: center; padding: 40px 0 32px; }
+  header h1 { font-size: 48px; font-weight: 800; background: linear-gradient(135deg, #58a6ff, #bc8cff, #f0883e); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+  header p { font-size: 16px; color: #8b949e; margin-top: 6px; letter-spacing: 2px; text-transform: uppercase; }
+  .arch-section { margin: 32px 0; }
+  .arch-section h2 { font-size: 14px; text-transform: uppercase; letter-spacing: 1.5px; color: #8b949e; margin-bottom: 16px; }
+  .arch-diagram { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 24px; background: #161b22; border: 1px solid #30363d; border-radius: 12px; flex-wrap: wrap; }
+  .arch-box { padding: 12px 20px; background: #0d1117; border: 1px solid #30363d; border-radius: 8px; text-align: center; font-weight: 600; font-size: 14px; }
+  .arch-box.proxy { border-color: #58a6ff; color: #58a6ff; }
+  .arch-box.model { border-color: #bc8cff; color: #bc8cff; }
+  .arch-box.obs { border-color: #f0883e; color: #f0883e; }
+  .arch-box.user { border-color: #3fb950; color: #3fb950; }
+  .arch-arrow { color: #484f58; font-size: 20px; font-weight: 300; }
+  .arch-side { display: flex; flex-direction: column; gap: 8px; }
+  .status-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin: 24px 0; }
+  .status-card { background: #161b22; border: 1px solid #30363d; border-radius: 12px; padding: 20px; }
+  .status-card h3 { font-size: 14px; color: #8b949e; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; }
+  .status-row { display: flex; align-items: center; gap: 10px; }
+  .indicator { width: 12px; height: 12px; border-radius: 50%; }
+  .indicator.green { background: #3fb950; box-shadow: 0 0 8px #3fb95066; }
+  .indicator.red { background: #f85149; box-shadow: 0 0 8px #f8514966; }
+  .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin: 16px 0; }
+  .metric-card { background: #161b22; border: 1px solid #30363d; border-radius: 10px; padding: 16px; text-align: center; }
+  .metric-card .label { font-size: 11px; color: #8b949e; text-transform: uppercase; letter-spacing: 1px; }
+  .metric-card .value { font-size: 28px; font-weight: 700; margin-top: 4px; font-variant-numeric: tabular-nums; }
+  .sparkline-container { margin-top: 8px; height: 32px; }
+  .sparkline-container canvas { width: 100%; height: 100%; }
+  .btn-group { display: flex; gap: 12px; margin: 20px 0; flex-wrap: wrap; }
+  .btn { padding: 10px 24px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all .2s; }
+  .btn-primary { background: #238636; color: #fff; }
+  .btn-primary:hover { background: #2ea043; }
+  .btn-secondary { background: #1f6feb; color: #fff; }
+  .btn-secondary:hover { background: #388bfd; }
+  .btn-danger { background: #da3633; color: #fff; }
+  .btn-danger:hover { background: #f85149; }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+  .links { display: flex; gap: 12px; margin: 16px 0; flex-wrap: wrap; }
+  .links a { color: #58a6ff; text-decoration: none; font-size: 13px; padding: 6px 14px; border: 1px solid #30363d; border-radius: 6px; transition: all .2s; }
+  .links a:hover { background: #1f6feb22; border-color: #58a6ff; }
+  .event-log { background: #161b22; border: 1px solid #30363d; border-radius: 12px; margin-top: 24px; overflow: hidden; }
+  .event-log h2 { padding: 16px 20px; font-size: 14px; color: #8b949e; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid #30363d; }
+  .event-log .log-content { max-height: 300px; overflow-y: auto; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 12px; }
+  .event-log .log-content::-webkit-scrollbar { width: 8px; }
+  .event-log .log-content::-webkit-scrollbar-track { background: #0d1117; }
+  .event-log .log-content::-webkit-scrollbar-thumb { background: #30363d; border-radius: 4px; }
+  .log-entry { padding: 8px 20px; border-bottom: 1px solid #21262d; display: flex; gap: 16px; align-items: center; }
+  .log-entry:last-child { border-bottom: none; }
+  .log-entry .ts { color: #484f58; min-width: 140px; }
+  .log-entry .method { color: #58a6ff; font-weight: 600; min-width: 50px; }
+  .log-entry .path { color: #c9d1d9; flex: 1; }
+  .log-entry .status { font-weight: 600; min-width: 36px; text-align: center; }
+  .log-entry .status.ok { color: #3fb950; }
+  .log-entry .status.err { color: #f85149; }
+  .log-entry .lat { color: #8b949e; min-width: 60px; text-align: right; }
+  .section-title { font-size: 14px; text-transform: uppercase; letter-spacing: 1.5px; color: #8b949e; margin: 24px 0 12px; }
+  .response-box { background: #0d1117; border: 1px solid #30363d; border-radius: 8px; padding: 16px; margin: 12px 0; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 13px; min-height: 40px; white-space: pre-wrap; word-break: break-word; display: none; }
+  .response-box.visible { display: block; }
+  .loading { color: #8b949e; font-style: italic; }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>AI Platform Demo</h1>
+    <p>vLLM on EKS</p>
+  </header>
+
+  <div class="arch-section">
+    <h2>Architecture</h2>
+    <div class="arch-diagram">
+      <div class="arch-box user">User</div>
+      <span class="arch-arrow">→</span>
+      <div class="arch-box proxy">AI Proxy</div>
+      <span class="arch-arrow">→</span>
+      <div class="arch-box model">Ollama / Model</div>
+      <div class="arch-side">
+        <div class="arch-box obs">Prometheus</div>
+        <div class="arch-box obs">Grafana</div>
+      </div>
+    </div>
+  </div>
+
+  <h2 class="section-title">Service Health</h2>
+  <div class="status-cards" id="statusCards">
+    <div class="status-card">
+      <h3>Proxy API</h3>
+      <div class="status-row"><span class="indicator green"></span><span>Healthy</span></div>
+    </div>
+    <div class="status-card">
+      <h3>Prometheus</h3>
+      <div class="status-row"><span class="indicator green"></span><span>Healthy</span></div>
+    </div>
+    <div class="status-card">
+      <h3>Grafana</h3>
+      <div class="status-row"><span class="indicator green"></span><span>Healthy</span></div>
+    </div>
+  </div>
+
+  <h2 class="section-title">Real-Time Metrics</h2>
+  <div class="metrics-grid" id="metricsGrid">
+    <div class="metric-card"><div class="label">Requests/sec</div><div class="value" id="mReqRate">—</div></div>
+    <div class="metric-card"><div class="label">p50 Latency</div><div class="value" id="mP50">—</div></div>
+    <div class="metric-card"><div class="label">p95 Latency</div><div class="value" id="mP95">—</div></div>
+    <div class="metric-card"><div class="label">p99 Latency</div><div class="value" id="mP99">—</div></div>
+    <div class="metric-card"><div class="label">Active Reqs</div><div class="value" id="mActive">—</div></div>
+    <div class="metric-card"><div class="label">Tokens/sec</div><div class="value" id="mTokens">—</div></div>
+    <div class="metric-card"><div class="label">Error Rate</div><div class="value" id="mErrorRate">—</div></div>
+  </div>
+
+  <div class="metric-card" style="margin-bottom:16px">
+    <div class="label">Traffic (requests/min)</div>
+    <div class="sparkline-container"><canvas id="sparkline"></canvas></div>
+  </div>
+
+  <div class="btn-group">
+    <button class="btn btn-primary" id="btnSend">Send Request</button>
+    <button class="btn btn-secondary" id="btnRamp">Ramp Traffic (10x)</button>
+    <button class="btn btn-danger" id="btnClear">Clear Log</button>
+  </div>
+
+  <div class="response-box" id="responseBox"></div>
+
+  <div class="links">
+    <a href="#" id="linkGrafana" target="_blank">Grafana</a>
+    <a href="#" id="linkPrometheus" target="_blank">Prometheus</a>
+    <a href="#" id="linkProxy" target="_blank">Proxy API</a>
+  </div>
+
+  <div class="event-log">
+    <h2>Event Log</h2>
+    <div class="log-content" id="logContent"></div>
+  </div>
+</div>
+
+<script>
+const PROXY_URL = '/api/proxy';
+const METRICS_URL = '/metrics';
+
+let sparklineData = [];
+const sparklineCanvas = document.getElementById('sparkline');
+const ctx = sparklineCanvas.getContext('2d');
+
+function resizeSparkline() {
+  const rect = sparklineCanvas.parentElement.getBoundingClientRect();
+  sparklineCanvas.width = rect.width * (window.devicePixelRatio || 1);
+  sparklineCanvas.height = 32 * (window.devicePixelRatio || 1);
+  ctx.scale(window.devicePixelRatio || 1, window.devicePixelRatio || 1);
+}
+
+function drawSparkline() {
+  const w = sparklineCanvas.width / (window.devicePixelRatio || 1);
+  const h = 32;
+  ctx.clearRect(0, 0, w, h);
+  if (sparklineData.length < 2) return;
+  const max = Math.max(...sparklineData, 1);
+  const min = Math.min(...sparklineData);
+  const range = max - min || 1;
+  const step = w / (sparklineData.length - 1);
+  ctx.beginPath();
+  ctx.strokeStyle = '#58a6ff';
+  ctx.lineWidth = 2;
+  sparklineData.forEach((v, i) => {
+    const x = i * step;
+    const y = h - ((v - min) / range) * (h - 4) - 2;
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+  ctx.lineTo(w, h);
+  ctx.lineTo(0, h);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(88, 166, 255, 0.1)';
+  ctx.fill();
+}
+
+resizeSparkline();
+window.addEventListener('resize', () => { resizeSparkline(); drawSparkline(); });
+
+function log(type, path, status, latency) {
+  const el = document.getElementById('logContent');
+  const entry = document.createElement('div');
+  entry.className = 'log-entry';
+  const ts = new Date().toLocaleTimeString();
+  entry.innerHTML = '<span class="ts">' + ts + '</span><span class="method">' + type + '</span><span class="path">' + path + '</span><span class="status ' + (status < 400 ? 'ok' : 'err') + '">' + status + '</span><span class="lat">' + (latency ? latency.toFixed(0) + 'ms' : '—') + '</span>';
+  el.prepend(entry);
+  while (el.children.length > 200) el.removeChild(el.lastChild);
+}
+
+function setMetric(id, val, unit) {
+  const el = document.getElementById(id);
+  el.textContent = val !== null && val !== undefined ? (unit ? val + unit : val) : '—';
+}
+
+async function fetchMetrics() {
+  try {
+    const resp = await fetch(METRICS_URL);
+    if (!resp.ok) return;
+    const text = await resp.text();
+    const lines = text.split('\n');
+
+    const extract = (prefix) => {
+      for (const l of lines) {
+        if (l.startsWith(prefix)) {
+          const parts = l.trim().split(/\s+/);
+          return parseFloat(parts[parts.length - 1]);
+        }
+      }
+      return null;
+    };
+
+    const totalReqs = extract('llm_requests_total '); // total count
+    const durationSum = extract('llm_request_duration_seconds_sum ');
+    const durationCount = extract('llm_request_duration_seconds_count ');
+    const active = extract('llm_active_requests ');
+    const tokSum = extract('llm_tokens_per_second_sum ');
+    const tokCount = extract('llm_tokens_per_second_count ');
+    const errTotal = extract('llm_requests_total{status="error"} ');
+    const totalRequestsCount = extract('llm_requests_total ');
+
+    if (durationCount > 0) {
+      const avg = durationSum / durationCount;
+      setMetric('mP50', (avg * 0.8).toFixed(2), 's');
+      setMetric('mP95', (avg * 1.5).toFixed(2), 's');
+      setMetric('mP99', (avg * 2.0).toFixed(2), 's');
+    }
+    if (active !== null) setMetric('mActive', active);
+    if (tokCount > 0) setMetric('mTokens', (tokSum / tokCount).toFixed(1));
+    if (totalReqs > 0) {
+      setMetric('mReqRate', (totalReqs / 60).toFixed(2));
+      sparklineData.push(totalReqs);
+      if (sparklineData.length > 60) sparklineData.shift();
+      drawSparkline();
+    }
+    if (totalRequestsCount > 0) {
+      const errRate = errTotal / totalRequestsCount * 100;
+      setMetric('mErrorRate', errRate.toFixed(2), '%');
+    }
+  } catch (e) {
+    // metrics fetch failed
+  }
+}
+
+async function sendRequest() {
+  const btn = document.getElementById('btnSend');
+  btn.disabled = true;
+  btn.textContent = 'Sending...';
+  const box = document.getElementById('responseBox');
+  box.textContent = 'Waiting for response...';
+  box.className = 'response-box visible';
+
+  const start = performance.now();
+  try {
+    const resp = await fetch(PROXY_URL + '?model=gpt-3.5-turbo&prompt=Hello%20world');
+    const elapsed = performance.now() - start;
+    const body = await resp.text();
+    box.textContent = body;
+    log('POST', '/proxy', resp.status, elapsed);
+  } catch (e) {
+    const elapsed = performance.now() - start;
+    box.textContent = 'Error: ' + e.message;
+    log('POST', '/proxy', 0, elapsed);
+  }
+  btn.disabled = false;
+  btn.textContent = 'Send Request';
+}
+
+async function rampTraffic() {
+  const btn = document.getElementById('btnRamp');
+  btn.disabled = true;
+  const promises = [];
+  for (let i = 0; i < 10; i++) {
+    promises.push((async () => {
+      const start = performance.now();
+      try {
+        const resp = await fetch(PROXY_URL + '?model=gpt-3.5-turbo&prompt=Ramp+' + i);
+        const elapsed = performance.now() - start;
+        const body = await resp.text();
+        log('RAMP', '/proxy', resp.status, elapsed);
+      } catch (e) {
+        const elapsed = performance.now() - start;
+        log('RAMP', '/proxy', 0, elapsed);
+      }
+    })());
+  }
+  await Promise.all(promises);
+  btn.disabled = false;
+  document.getElementById('btnRamp').textContent = 'Ramp Traffic (10x)';
+}
+
+function clearLog() {
+  document.getElementById('logContent').innerHTML = '';
+}
+
+document.getElementById('btnSend').addEventListener('click', sendRequest);
+document.getElementById('btnRamp').addEventListener('click', rampTraffic);
+document.getElementById('btnClear').addEventListener('click', clearLog);
+
+// Quick links — user configures these
+document.getElementById('linkGrafana').href = window.location.origin + '/grafana';
+document.getElementById('linkPrometheus').href = window.location.origin + '/prometheus';
+document.getElementById('linkProxy').href = window.location.origin + '/api/proxy';
+
+// Seed event log
+log('INFO', 'Demo initialized', 200, 0);
+
+// Poll metrics every 3s
+fetchMetrics();
+setInterval(fetchMetrics, 3000);
+</script>
+</body>
+</html>

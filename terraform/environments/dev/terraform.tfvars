@@ -1,0 +1,11 @@
+environment        = "dev"
+region             = "us-west-2"
+vpc_cidr           = "10.0.0.0/16"
+cluster_name       = "ai-platform-dev"
+enable_gpu         = true
+gpu_min_size       = 0
+gpu_max_size       = 2
+gpu_instance_type  = "g5.xlarge"
+cpu_min_size       = 1
+cpu_max_size       = 4
+cpu_instance_type  = "t3.large"

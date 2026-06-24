@@ -1,0 +1,42 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: vllm-metrics
+  namespace: ai-platform
+  labels:
+    release: prometheus
+    app: llm-inference
+spec:
+  selector:
+    matchLabels:
+      serving.kserve.io/inferenceservice: llm-inference
+  namespaceSelector:
+    matchNames:
+      - ai-platform
+  endpoints:
+    - targetPort: 8000
+      path: /metrics
+      interval: 10s
+      scheme: http
+      relabelings:
+        - sourceLabels:
+            - __meta_kubernetes_pod_node_name
+          targetLabel: node
+          action: replace
+        - sourceLabels:
+            - __meta_kubernetes_pod_label_serving_kserve_io_inferenceservice
+          targetLabel: inference_service
+          action: replace
+        - sourceLabels:
+            - __meta_kubernetes_pod_label_serving_kserve_io_predictor
+          targetLabel: predictor_version
+          action: replace
+        - sourceLabels:
+            - __meta_kubernetes_pod_container_port_number
+          targetLabel: container_port
+          action: replace
+      metricRelabelings:
+        - sourceLabels:
+            - __name__
+          regex: "vllm:.*|nv_|cuda_|gpu_"
+          action: keep
